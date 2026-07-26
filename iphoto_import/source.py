@@ -300,15 +300,20 @@ def _make_download(camera_file):
         dest_dir.mkdir(parents=True, exist_ok=True)
         result = {"path": None, "error": None, "done": False}
 
-        def completion(info, error):
-            if error is not None:
-                result["error"] = str(error)
-            else:
-                saved_name = None
-                if info:
-                    saved_name = info.get(ICC.ICSavedFilename)
-                result["path"] = str(dest_dir / (saved_name or camera_file.name()))
-            result["done"] = True
+        # ImageCaptureCore calls this block as (savedFilename: NSString, error: NSError).
+        # Wrap the whole body: an exception raised out of a PyObjC block is an
+        # uncaught ObjC exception on a background thread and aborts the process.
+        def completion(saved_filename, error):
+            try:
+                if error is not None:
+                    result["error"] = str(error)
+                else:
+                    name = str(saved_filename) if saved_filename else camera_file.name()
+                    result["path"] = str(dest_dir / name)
+            except Exception as exc:
+                result["error"] = f"completion handler error: {exc}"
+            finally:
+                result["done"] = True
 
         options = {
             ICC.ICDownloadsDirectoryURL: NSURL.fileURLWithPath_(str(dest_dir)),
