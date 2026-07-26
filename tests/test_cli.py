@@ -15,6 +15,7 @@ def test_main_runs_dry_run_with_injected_deps(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(cli, "ensure_all_mounts", lambda c: None)
     monkeypatch.setattr(cli, "build_source",
                         lambda: FakeSource([("IMG_1.HEIC", datetime(2026, 7, 25, 8, 0), b"x")]))
+    monkeypatch.setattr(cli.shutil, "which", lambda _name: "/usr/bin/exiftool")
 
     rc = cli.main(["--dry-run"])
     assert rc == 0
