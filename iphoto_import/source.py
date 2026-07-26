@@ -112,9 +112,17 @@ class ImageCaptureSource(PhotoSource):
     the instance (which the CLI holds for the whole run) prevents that.
     """
 
-    def __init__(self, discovery_timeout: float = 30.0, ready_timeout: float = 30.0):
+    def __init__(self, discovery_timeout: float = 30.0, ready_timeout: float = 30.0,
+                 session_open_attempts: int = 6, session_open_timeout: float = 10.0,
+                 session_open_retry_delay: float = 3.0):
         self.discovery_timeout = discovery_timeout
         self.ready_timeout = ready_timeout
+        # iOS commonly refuses the FIRST session-open right after connect with
+        # -9943 "Please unlock" even on an unlocked, trusted device; retry with
+        # a short settle delay before giving up.
+        self.session_open_attempts = session_open_attempts
+        self.session_open_timeout = session_open_timeout
+        self.session_open_retry_delay = session_open_retry_delay
         self._browser = None
         self._browser_delegate = None
         self._camera_delegate = None
@@ -221,13 +229,32 @@ class ImageCaptureSource(PhotoSource):
             # CLI, the session's lifetime is the process and the OS reclaims it on
             # exit. The finally: below stops the *browser* (discovery only), which
             # does not close an already-open device session.
-            device.requestOpenSessionWithOptions_completion_(None, open_completion)
-            _pump_runloop_until(self.discovery_timeout, session_done.is_set)
+            #
+            # Retry the open: iOS often refuses the first attempt with -9943
+            # ("Please unlock") even on an unlocked device, then succeeds moments
+            # later.
+            last_error = None
+            for attempt in range(self.session_open_attempts):
+                session_done.clear()
+                state["open_error"] = None
+                device.requestOpenSessionWithOptions_completion_(None, open_completion)
+                _pump_runloop_until(self.session_open_timeout, session_done.is_set)
+                if not session_done.is_set():
+                    last_error = "timed out opening a session"
+                elif state["open_error"] is not None:
+                    last_error = str(state["open_error"])
+                else:
+                    last_error = None
+                    break
+                if attempt < self.session_open_attempts - 1:
+                    _pump_runloop_until(self.session_open_retry_delay, lambda: False)
 
-            if not session_done.is_set():
-                raise ImageCaptureError("Timed out opening a session with the camera.")
-            if state["open_error"] is not None:
-                raise ImageCaptureError(f"Failed to open camera session: {state['open_error']}")
+            if last_error is not None:
+                raise ImageCaptureError(
+                    f"Failed to open camera session after {self.session_open_attempts} "
+                    f"attempts: {last_error}. Make sure the iPhone is unlocked "
+                    f"(set Auto-Lock to Never while importing)."
+                )
 
             def files_present():
                 files = device.mediaFiles()
