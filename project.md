@@ -6,10 +6,10 @@ Mac mini.
 
 ## Topology
 - **iPhone** → USB → **Mac mini** (the script runs here, on macOS).
-- **Destination**: two separate SMB shares hosted by a Linux box (192.168.1.40),
+- **Destination**: two separate SMB shares hosted by a Linux box (192.168.1.100),
   backed by an SSD, mounted on the Mac mini:
-  - `smb://192.168.1.40/Pictures` → `/Volumes/Pictures`
-  - `smb://192.168.1.40/Videos`   → `/Volumes/Videos`
+  - `smb://192.168.1.100/Pictures` → `/Volumes/Pictures`
+  - `smb://192.168.1.100/Videos`   → `/Volumes/Videos`
 
 ## Decisions (captured during brainstorming)
 
@@ -25,15 +25,16 @@ Mac mini.
    for placement). ImageCaptureCore's per-file `creationDate` is used as a fast
    pre-download filter. Fallback: file timestamp; else an `Unknown-Date/` folder.
 
-3. **Folder structure:** Flat, one folder per day, `YYYY-MM-DD`.
+3. **Folder structure:** Nested — a year parent, then one folder per day:
+   `YYYY/YYYY-MM-DD` (e.g. `2026/2026-07-25`).
 
 4. **Destination layout (two SMB shares):**
-   - Photos → `/Volumes/Pictures/YYYY-MM-DD/`  (incl. screenshots)
-   - Videos → `/Volumes/Videos/YYYY-MM-DD/`
+   - Photos → `/Volumes/Pictures/YYYY/YYYY-MM-DD/`  (incl. screenshots)
+   - Videos → `/Volumes/Videos/YYYY/YYYY-MM-DD/`
 
 4b. **Auto-mount:** The script mounts each share if not already mounted, using
     credentials from `.env`, via
-    `osascript -e 'mount volume "smb://USER:PASS@192.168.1.40/<share>"'`
+    `osascript -e 'mount volume "smb://USER:PASS@192.168.1.100/<share>"'`
     (password URL-encoded). It verifies the real mount point (macOS may append
     `-1` if already mounted) and fails clearly if a share is
     unreachable/unwritable — before any download.
@@ -67,7 +68,7 @@ Mac mini.
 
 ## Config (`.env`, git-ignored)
 ```
-SMB_HOST=192.168.1.40
+SMB_HOST=192.168.1.100
 SMB_USER=youruser
 SMB_PASS=yourpassword
 PICTURES_SHARE=Pictures
