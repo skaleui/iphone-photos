@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IphonePhotos — iPhone → SSD import pipeline</title>
+<meta name="description" content="A macOS CLI that pulls original photos & videos off a USB iPhone and files them into dated folders on SMB-mounted SSD shares. Non-destructive and incremental.">
+<style>
+  :root{
+    --bg:#f7f8fa; --panel:#ffffff; --ink:#1a1d24; --muted:#5b6474;
+    --line:#e6e9ef; --accent:#3b82f6; --accent-ink:#1d4ed8; --chip:#eef2f8; --code:#0f1626; --code-ink:#e6edf7;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0d1117; --panel:#161b22; --ink:#e6edf3; --muted:#9aa4b2;
+      --line:#232b36; --accent:#58a6ff; --accent-ink:#79c0ff; --chip:#1c2430; --code:#010409; --code-ink:#e6edf7;
+    }
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       background:var(--bg);color:var(--ink)}
+  a{color:var(--accent-ink);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px}
+  header{padding:72px 0 40px;text-align:center}
+  .badge{display:inline-block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+         color:var(--accent-ink);background:var(--chip);border:1px solid var(--line);
+         padding:5px 12px;border-radius:999px;margin-bottom:20px}
+  h1{font-size:clamp(2rem,5vw,3rem);margin:.2em 0 .1em;letter-spacing:-.02em}
+  .tag{font-size:clamp(1.05rem,2.5vw,1.3rem);color:var(--muted);max-width:640px;margin:12px auto 0}
+  .cta{margin-top:28px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .btn{display:inline-block;padding:11px 20px;border-radius:10px;font-weight:600;border:1px solid var(--line)}
+  .btn.primary{background:var(--accent);color:#fff;border-color:transparent}
+  .btn.primary:hover{filter:brightness(1.05);text-decoration:none}
+  .btn.ghost{background:var(--panel);color:var(--ink)}
+  .chips{margin-top:26px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .chips span{font-size:13px;color:var(--muted);background:var(--panel);border:1px solid var(--line);
+              padding:4px 11px;border-radius:8px}
+  section{padding:34px 0;border-top:1px solid var(--line)}
+  h2{font-size:1.5rem;letter-spacing:-.01em;margin:0 0 6px}
+  .lead{color:var(--muted);margin:0 0 22px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 18px 16px}
+  .card h3{margin:0 0 6px;font-size:1.02rem}
+  .card p{margin:0;color:var(--muted);font-size:.95rem}
+  .flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:6px}
+  .step{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .step .n{font-size:12px;color:var(--accent-ink);font-weight:700}
+  .step h4{margin:4px 0 4px;font-size:.98rem}
+  .step p{margin:0;color:var(--muted);font-size:.88rem}
+  pre{background:var(--code);color:var(--code-ink);border-radius:12px;padding:16px 18px;overflow-x:auto;
+      font:13.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  pre .c{color:#8b98a9}
+  .tree{white-space:pre;color:var(--ink)}
+  .note{background:var(--chip);border:1px solid var(--line);border-radius:12px;padding:14px 16px;color:var(--muted);font-size:.92rem}
+  footer{padding:40px 0 60px;text-align:center;color:var(--muted);font-size:.9rem;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+<header class="wrap">
+  <span class="badge">macOS · Python 3 · Non-destructive</span>
+  <h1>IphonePhotos</h1>
+  <p class="tag">A command-line pipeline that pulls <strong>original</strong> photos &amp; videos off a USB-connected iPhone and files them into dated folders on SMB-mounted SSD shares — safely and incrementally.</p>
+  <div class="cta">
+    <a class="btn primary" href="https://github.com/skaleui/iphone-photos">View on GitHub</a>
+    <a class="btn ghost" href="https://github.com/skaleui/iphone-photos/pull/1">Read the PR</a>
+  </div>
+  <div class="chips">
+    <span>ImageCaptureCore (PyObjC)</span><span>exiftool</span><span>SMB / SSD</span><span>34 tests</span>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section>
+  <h2>What it does</h2>
+  <p class="lead">Plug in your iPhone, run one command, and every new photo and video lands in the right place — organized by the date it was taken.</p>
+  <div class="grid">
+    <div class="card"><h3>Reads originals off the phone</h3><p>Talks to a USB-connected iPhone through Apple’s ImageCaptureCore framework — full-resolution HEIC/JPEG/MOV, not re-compressed copies.</p></div>
+    <div class="card"><h3>Dated folders by year</h3><p>Photos and videos are filed into <code>YYYY/YYYY-MM-DD/</code> using the true EXIF “date taken” (via exiftool), with sensible fallbacks.</p></div>
+    <div class="card"><h3>Two tidy trees</h3><p>Photos go to a <code>Pictures</code> share, videos to a <code>Videos</code> share — each on an SMB-mounted SSD, auto-mounted before every run.</p></div>
+    <div class="card"><h3>Non-destructive</h3><p>Nothing is ever deleted from the iPhone. The phone stays your source of truth.</p></div>
+    <div class="card"><h3>Incremental</h3><p>Already-imported files are skipped by name + date folder — without even downloading them — so re-runs are fast.</p></div>
+    <div class="card"><h3>Smart about edge cases</h3><p>Screenshots kept as photos; Live-Photo motion clips skipped; files with no metadata land in <code>Unknown-Date/</code>.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>How a run works</h2>
+  <p class="lead">A small pipeline of focused, testable stages.</p>
+  <div class="flow">
+    <div class="step"><div class="n">01</div><h4>Mount</h4><p>Auto-mounts both SMB shares from <code>.env</code>; verifies exiftool before any download.</p></div>
+    <div class="step"><div class="n">02</div><h4>Discover</h4><p>Finds the connected iPhone via ImageCaptureCore and lists files with names + dates.</p></div>
+    <div class="step"><div class="n">03</div><h4>Plan</h4><p>Classifies photo vs video, drops Live-Photo motion, skips already-imported files.</p></div>
+    <div class="step"><div class="n">04</div><h4>Pull &amp; date</h4><p>Downloads new originals to staging; exiftool decides the authoritative date.</p></div>
+    <div class="step"><div class="n">05</div><h4>File</h4><p>Moves each file into <code>&lt;share&gt;/YYYY/YYYY-MM-DD/</code> and reports the totals.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>Resulting layout</h2>
+  <pre class="tree">/Volumes/Pictures/
+└── 2026/
+    └── 2026-07-25/
+        ├── IMG_1234.HEIC
+        └── Screenshot.png
+
+/Volumes/Videos/
+└── 2026/
+    └── 2026-07-25/
+        └── VID_0007.MOV</pre>
+</section>
+
+<section>
+  <h2>Quick start</h2>
+  <p class="lead">macOS with an iPhone on USB, an SMB share on your SSD, and Xcode’s ImageCaptureCore available.</p>
+  <pre><span class="c"># install</span>
+python3 -m pip install -r requirements.txt
+brew install exiftool
+
+<span class="c"># configure (copy the example, then fill in your SMB details)</span>
+cp .env.example .env
+
+<span class="c"># preview without writing anything, then import for real</span>
+python3 import_photos.py --dry-run
+python3 import_photos.py --verbose</pre>
+  <p class="note">Config lives in a git-ignored <code>.env</code> (SMB host, user, password, share names). The first run triggers a macOS prompt to access the iPhone — grant it, and tap “Trust” on the phone.</p>
+</section>
+
+<section>
+  <h2>Under the hood</h2>
+  <div class="grid">
+    <div class="card"><h3>Testable core</h3><p>Classification, Live-Photo pairing, date-folder selection and dedup are pure functions behind a <code>PhotoSource</code> seam — <strong>34 passing tests</strong>, no phone required.</p></div>
+    <div class="card"><h3>Python 3 + PyObjC</h3><p>All-Python: PyObjC drives ImageCaptureCore directly, so there’s no separate helper binary and no manual export step.</p></div>
+    <div class="card"><h3>exiftool for dates</h3><p>The gold standard for reading “date taken” out of HEIC, MOV and PNG — the authority for where each file is filed.</p></div>
+  </div>
+</section>
+
+</main>
+
+<footer class="wrap">
+  Built with a spec-first, test-driven workflow. &nbsp;·&nbsp;
+  <a href="https://github.com/skaleui/iphone-photos">github.com/skaleui/iphone-photos</a>
+</footer>
+</body>
+</html>
