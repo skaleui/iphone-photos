@@ -93,6 +93,13 @@ class ImageCaptureSource(PhotoSource):
     Delegate callbacks are driven by pumping the current run loop; list_items
     blocks until the device's file list is available (or discovery/open/ready
     times out).
+
+    Session lifetime: the device session opened in list_items() is
+    intentionally left OPEN when the method returns. The per-file download()
+    closures run later (Task 8's organizer) and require the session to still
+    be open. This is a one-shot CLI, so the session's lifetime is the process
+    and the OS reclaims it on exit. (Stopping the browser only ends device
+    discovery; it does not close an already-open device session.)
     """
 
     def __init__(self, discovery_timeout: float = 30.0, ready_timeout: float = 30.0):
@@ -170,47 +177,52 @@ class ImageCaptureSource(PhotoSource):
         )
         browser.start()
 
-        _pump_runloop_until(self.discovery_timeout, device_found.is_set)
+        try:
+            _pump_runloop_until(self.discovery_timeout, device_found.is_set)
 
-        device = state["device"]
-        if device is None:
+            device = state["device"]
+            if device is None:
+                raise ImageCaptureError(
+                    "No iPhone/camera found. Plug in, unlock, and tap 'Trust'. "
+                    "If this is the first run, grant the macOS permission prompt."
+                )
+
+            device.setDelegate_(camera_delegate)
+
+            def open_completion(error):
+                state["open_error"] = error
+                session_done.set()
+
+            # NOTE: this session is intentionally NOT closed by list_items().
+            # The per-file download() closures returned below run later (Task 8's
+            # organizer) and require this session to remain open. As a one-shot
+            # CLI, the session's lifetime is the process and the OS reclaims it on
+            # exit. The finally: below stops the *browser* (discovery only), which
+            # does not close an already-open device session.
+            device.requestOpenSessionWithOptions_completion_(None, open_completion)
+            _pump_runloop_until(self.discovery_timeout, session_done.is_set)
+
+            if not session_done.is_set():
+                raise ImageCaptureError("Timed out opening a session with the camera.")
+            if state["open_error"] is not None:
+                raise ImageCaptureError(f"Failed to open camera session: {state['open_error']}")
+
+            def files_present():
+                files = device.mediaFiles()
+                return files is not None and len(files) > 0
+
+            _pump_runloop_until(self.ready_timeout, lambda: files_ready.is_set() or files_present())
+
+            media_files = device.mediaFiles() or []
+            items: List[MediaItem] = []
+            for f in media_files:
+                name = f.name()
+                created = _ns_to_datetime(f.creationDate())
+                items.append(MediaItem(name=name, creation_date=created, download=_make_download(f)))
+
+            return items
+        finally:
             browser.stop()
-            raise ImageCaptureError(
-                "No iPhone/camera found. Plug in, unlock, and tap 'Trust'. "
-                "If this is the first run, grant the macOS permission prompt."
-            )
-
-        device.setDelegate_(camera_delegate)
-
-        def open_completion(error):
-            state["open_error"] = error
-            session_done.set()
-
-        device.requestOpenSessionWithOptions_completion_(None, open_completion)
-        _pump_runloop_until(self.discovery_timeout, session_done.is_set)
-
-        if not session_done.is_set():
-            browser.stop()
-            raise ImageCaptureError("Timed out opening a session with the camera.")
-        if state["open_error"] is not None:
-            browser.stop()
-            raise ImageCaptureError(f"Failed to open camera session: {state['open_error']}")
-
-        def files_present():
-            files = device.mediaFiles()
-            return files is not None and len(files) > 0
-
-        _pump_runloop_until(self.ready_timeout, lambda: files_ready.is_set() or files_present())
-
-        media_files = device.mediaFiles() or []
-        items: List[MediaItem] = []
-        for f in media_files:
-            name = f.name()
-            created = _ns_to_datetime(f.creationDate())
-            items.append(MediaItem(name=name, creation_date=created, download=_make_download(f)))
-
-        browser.stop()
-        return items
 
 
 def _pump_runloop_until(timeout: float, predicate) -> None:
