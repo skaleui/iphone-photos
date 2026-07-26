@@ -22,8 +22,8 @@ def test_destination_path_photo_and_video(tmp_path, monkeypatch):
     c, pics, vids = make_config(tmp_path)
     monkeypatch.setattr(type(c), "pictures_mount", property(lambda self: pics))
     monkeypatch.setattr(type(c), "videos_mount", property(lambda self: vids))
-    assert destination_path("photo", "2026-07-25", "IMG_1.HEIC", c) == pics / "2026-07-25" / "IMG_1.HEIC"
-    assert destination_path("video", "2026-07-25", "VID_1.MOV", c) == vids / "2026-07-25" / "VID_1.MOV"
+    assert destination_path("photo", "2026/2026-07-25", "IMG_1.HEIC", c) == pics / "2026" / "2026-07-25" / "IMG_1.HEIC"
+    assert destination_path("video", "2026/2026-07-25", "VID_1.MOV", c) == vids / "2026" / "2026-07-25" / "VID_1.MOV"
 
 
 def test_run_import_places_files_by_exif_date(tmp_path, monkeypatch):
@@ -36,7 +36,7 @@ def test_run_import_places_files_by_exif_date(tmp_path, monkeypatch):
                         lambda paths: {p: datetime(2026, 7, 25, 8, 0) for p in paths})
     src = FakeSource([("IMG_1.HEIC", datetime(2026, 7, 25, 8, 0), b"x")])
     report = run_import(src, c)
-    assert (pics / "2026-07-25" / "IMG_1.HEIC").read_bytes() == b"x"
+    assert (pics / "2026" / "2026-07-25" / "IMG_1.HEIC").read_bytes() == b"x"
     assert report.photos == 1 and report.videos == 0
 
 
@@ -44,15 +44,15 @@ def test_run_import_skips_already_present(tmp_path, monkeypatch):
     c, pics, vids = make_config(tmp_path)
     monkeypatch.setattr(type(c), "pictures_mount", property(lambda self: pics))
     monkeypatch.setattr(type(c), "videos_mount", property(lambda self: vids))
-    (pics / "2026-07-25").mkdir(parents=True)
-    (pics / "2026-07-25" / "IMG_1.HEIC").write_bytes(b"old")
+    (pics / "2026" / "2026-07-25").mkdir(parents=True)
+    (pics / "2026" / "2026-07-25" / "IMG_1.HEIC").write_bytes(b"old")
     import iphoto_import.organizer as org
     monkeypatch.setattr(org, "read_dates",
                         lambda paths: {p: datetime(2026, 7, 25, 8, 0) for p in paths})
     src = FakeSource([("IMG_1.HEIC", datetime(2026, 7, 25, 8, 0), b"new")])
     report = run_import(src, c)
     # Not re-downloaded/overwritten.
-    assert (pics / "2026-07-25" / "IMG_1.HEIC").read_bytes() == b"old"
+    assert (pics / "2026" / "2026-07-25" / "IMG_1.HEIC").read_bytes() == b"old"
     assert report.skipped_existing == 1
 
 
@@ -62,5 +62,5 @@ def test_dry_run_writes_nothing(tmp_path, monkeypatch):
     monkeypatch.setattr(type(c), "videos_mount", property(lambda self: vids))
     src = FakeSource([("IMG_1.HEIC", datetime(2026, 7, 25, 8, 0), b"x")])
     report = run_import(src, c, dry_run=True)
-    assert not (pics / "2026-07-25").exists()
+    assert not (pics / "2026").exists()
     assert report.photos == 1  # would-import count

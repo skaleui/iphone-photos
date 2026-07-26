@@ -16,4 +16,7 @@ def classify(name: str) -> Optional[str]:
 
 
 def date_folder(dt: Optional[datetime]) -> str:
-    return dt.strftime("%Y-%m-%d") if dt is not None else "Unknown-Date"
+    # Nested layout: a year parent folder, then the day folder, e.g.
+    # "2026/2026-07-25". Returned as a relative path so it composes directly
+    # under the Pictures/Videos mount roots.
+    return dt.strftime("%Y/%Y-%m-%d") if dt is not None else "Unknown-Date"

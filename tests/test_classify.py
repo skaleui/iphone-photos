@@ -23,7 +23,7 @@ def test_classify_unknown_returns_none():
 
 
 def test_date_folder_formats_date():
-    assert date_folder(datetime(2026, 7, 25, 14, 30)) == "2026-07-25"
+    assert date_folder(datetime(2026, 7, 25, 14, 30)) == "2026/2026-07-25"
 
 
 def test_date_folder_none_is_unknown():

@@ -16,7 +16,7 @@ def test_photos_and_videos_are_split_into_folders():
     plan = build_plan(items, never_exists)
     by_name = {e.item.name: e for e in plan.to_import}
     assert by_name["IMG_1.HEIC"].media_type == "photo"
-    assert by_name["IMG_1.HEIC"].folder == "2026-07-25"
+    assert by_name["IMG_1.HEIC"].folder == "2026/2026-07-25"
     assert by_name["VID_1.MOV"].media_type == "video"
 
 
@@ -45,7 +45,7 @@ def test_non_media_is_skipped_as_other():
 
 def test_already_imported_is_skipped_by_name_and_folder():
     def exists(media_type, folder, name):
-        return media_type == "photo" and folder == "2026-07-25" and name == "IMG_1.HEIC"
+        return media_type == "photo" and folder == "2026/2026-07-25" and name == "IMG_1.HEIC"
 
     items = [item("IMG_1.HEIC"), item("IMG_2.HEIC")]
     plan = build_plan(items, exists)

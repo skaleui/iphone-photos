@@ -17,7 +17,7 @@ Plug in the unlocked iPhone (tap **Trust**), then:
     python3 import_photos.py               # import
     python3 import_photos.py --verbose     # import, logging each file
 
-Photos land in `/Volumes/<PICTURES_SHARE>/YYYY-MM-DD/`, videos in
-`/Volumes/<VIDEOS_SHARE>/YYYY-MM-DD/`. Files already imported (same filename in
+Photos land in `/Volumes/<PICTURES_SHARE>/YYYY/YYYY-MM-DD/`, videos in
+`/Volumes/<VIDEOS_SHARE>/YYYY/YYYY-MM-DD/`. Files already imported (same filename in
 the same date folder) are skipped without re-downloading. Nothing is deleted
 from the phone. Live Photo motion clips (a `.MOV` sharing a photo's name) are skipped.

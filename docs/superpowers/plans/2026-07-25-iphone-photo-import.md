@@ -14,10 +14,10 @@
 - **Non-destructive:** never delete anything from the iPhone.
 - **Incremental:** skip files already imported, decided by **filename + destination date folder**; skip such files **without downloading**.
 - Date source order for placement (authoritative, via exiftool): `DateTimeOriginal` → `CreateDate` → `FileModifyDate` → else `Unknown-Date/`.
-- Folder name format: `YYYY-MM-DD` (strftime `%Y-%m-%d`).
+- Folder name format: nested year parent + day folder, `YYYY/YYYY-MM-DD` (strftime `%Y/%Y-%m-%d`). (Updated after initial implementation; the task snapshots below show the original flat `%Y-%m-%d`.)
 - Photo extensions → Pictures: `.heic .heif .jpg .jpeg .png`. Video extensions → Videos: `.mov .mp4 .m4v`. Extension matching is case-insensitive.
 - Live Photo motion skip: a video file is skipped when a photo file shares its base name (stem).
-- Destinations: photos → `/Volumes/<PICTURES_SHARE>/YYYY-MM-DD/`; videos → `/Volumes/<VIDEOS_SHARE>/YYYY-MM-DD/`.
+- Destinations: photos → `/Volumes/<PICTURES_SHARE>/YYYY/YYYY-MM-DD/`; videos → `/Volumes/<VIDEOS_SHARE>/YYYY/YYYY-MM-DD/`.
 - Config (host, user, password, share names) comes from a git-ignored `.env`; `.env.example` is committed. CLI flags carry runtime behavior only: `--dry-run`, `--verbose`, `--staging`.
 - Secrets never committed; `.env` is git-ignored.
 

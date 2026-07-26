@@ -24,8 +24,8 @@ into date-based folders on an SSD, run manually from a Mac mini. The import is
 |---|----------|
 | 1 | **Device access** via Apple **ImageCaptureCore**, driven from Python through **PyObjC** (all-Python; no manual Image Capture step, no separate binary). Fallback: a small Swift/ImageCaptureCore CLI + Python, only if the PyObjC `ImageCaptureCore` binding is unavailable (Xcode is installed). |
 | 2 | **Date for placement** = EXIF/embedded "date taken" via **exiftool** (authoritative). ImageCaptureCore per-file `creationDate` is a pre-download filter only. Fallback: file timestamp; else an `Unknown-Date/` folder. |
-| 3 | **Folder structure**: flat, one folder per day, `YYYY-MM-DD`. |
-| 4 | **Destination layout** (two shares): photos → `/Volumes/Pictures/YYYY-MM-DD/`; videos → `/Volumes/Videos/YYYY-MM-DD/`. |
+| 3 | **Folder structure**: nested — a year parent, then one folder per day, `YYYY/YYYY-MM-DD`. |
+| 4 | **Destination layout** (two shares): photos → `/Volumes/Pictures/YYYY/YYYY-MM-DD/`; videos → `/Volumes/Videos/YYYY/YYYY-MM-DD/`. |
 | 5 | **Incremental**: skip files already imported, decided by **filename + destination date folder**. Because names/dates are known before download, already-imported files are skipped **without downloading**. |
 | 6 | **Copy only**: never delete from the iPhone. |
 | 7 | **Screenshots (`.png`)**: included, treated as photos. |
@@ -104,7 +104,7 @@ selection, dedup) is pure and consumes `PhotoSource` items — fully unit-testab
 6. **exiftool** (single batch call, JSON) over staged files → authoritative date.
    `DateTimeOriginal` → `CreateDate` → `FileModifyDate` → else `Unknown-Date/`.
 7. **Place** each staged file via `shutil.move` into
-   `/Volumes/Pictures|Videos/<YYYY-MM-DD>/<name>`, creating folders as needed,
+   `/Volumes/Pictures|Videos/<YYYY>/<YYYY-MM-DD>/<name>`, creating folders as needed,
    tolerating SMB partial metadata-copy quirks. If the final destination already
    exists (e.g. date differed from the pre-filter), skip. Clean staging.
 8. **Report**: downloaded photos, downloaded videos, skipped-existing,
