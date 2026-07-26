@@ -6,10 +6,10 @@ Mac mini.
 
 ## Topology
 - **iPhone** → USB → **Mac mini** (the script runs here, on macOS).
-- **Destination**: two separate SMB shares hosted by a Linux box (192.168.1.40),
+- **Destination**: two separate SMB shares hosted by a Linux box (192.168.1.100),
   backed by an SSD, mounted on the Mac mini:
-  - `smb://192.168.1.40/Pictures` → `/Volumes/Pictures`
-  - `smb://192.168.1.40/Videos`   → `/Volumes/Videos`
+  - `smb://192.168.1.100/Pictures` → `/Volumes/Pictures`
+  - `smb://192.168.1.100/Videos`   → `/Volumes/Videos`
 
 ## Decisions (captured during brainstorming)
 
@@ -33,7 +33,7 @@ Mac mini.
 
 4b. **Auto-mount:** The script mounts each share if not already mounted, using
     credentials from `.env`, via
-    `osascript -e 'mount volume "smb://USER:PASS@192.168.1.40/<share>"'`
+    `osascript -e 'mount volume "smb://USER:PASS@192.168.1.100/<share>"'`
     (password URL-encoded). It verifies the real mount point (macOS may append
     `-1` if already mounted) and fails clearly if a share is
     unreachable/unwritable — before any download.
@@ -67,7 +67,7 @@ Mac mini.
 
 ## Config (`.env`, git-ignored)
 ```
-SMB_HOST=192.168.1.40
+SMB_HOST=192.168.1.100
 SMB_USER=youruser
 SMB_PASS=yourpassword
 PICTURES_SHARE=Pictures

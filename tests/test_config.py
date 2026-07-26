@@ -5,7 +5,7 @@ from iphoto_import.config import load_config
 
 def _env(**over):
     base = {
-        "SMB_HOST": "192.168.1.40",
+        "SMB_HOST": "192.168.1.100",
         "SMB_USER": "bob",
         "SMB_PASS": "s3cret",
         "PICTURES_SHARE": "Pictures",
@@ -17,7 +17,7 @@ def _env(**over):
 
 def test_load_config_reads_required_keys():
     c = load_config(_env())
-    assert c.smb_host == "192.168.1.40"
+    assert c.smb_host == "192.168.1.100"
     assert c.smb_user == "bob"
     assert c.smb_pass == "s3cret"
     assert c.pictures_share == "Pictures"

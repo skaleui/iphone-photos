@@ -36,7 +36,7 @@
 - [ ] **Step 1: Initialise git and package layout**
 
 ```bash
-cd "/Volumes/Crucial/work/Home Projects/IphonePhotos"
+cd "/path/to/IphonePhotos"
 git init
 mkdir -p iphoto_import tests
 touch iphoto_import/__init__.py tests/__init__.py
@@ -60,7 +60,7 @@ staging/
 Create `.env.example`:
 
 ```dotenv
-SMB_HOST=192.168.1.40
+SMB_HOST=192.168.1.100
 SMB_USER=youruser
 SMB_PASS=yourpassword
 PICTURES_SHARE=Pictures
@@ -82,7 +82,7 @@ pytest>=8.0
 - [ ] **Step 5: Install dependencies and exiftool**
 
 ```bash
-cd "/Volumes/Crucial/work/Home Projects/IphonePhotos"
+cd "/path/to/IphonePhotos"
 python3 -m pip install -r requirements.txt
 which exiftool || brew install exiftool
 ```
@@ -108,7 +108,7 @@ def test_exiftool_on_path():
 
 - [ ] **Step 7: Run the verification test**
 
-Run: `cd "/Volumes/Crucial/work/Home Projects/IphonePhotos" && python3 -m pytest tests/test_environment.py -v`
+Run: `cd "/path/to/IphonePhotos" && python3 -m pytest tests/test_environment.py -v`
 Expected: PASS. If `test_imagecapturecore_binding_importable` FAILS, STOP and report — the plan's device layer (Task 7) needs the Swift fallback instead.
 
 - [ ] **Step 8: Commit**
@@ -145,7 +145,7 @@ from iphoto_import.config import load_config
 
 def _env(**over):
     base = {
-        "SMB_HOST": "192.168.1.40",
+        "SMB_HOST": "192.168.1.100",
         "SMB_USER": "bob",
         "SMB_PASS": "s3cret",
         "PICTURES_SHARE": "Pictures",
@@ -157,7 +157,7 @@ def _env(**over):
 
 def test_load_config_reads_required_keys():
     c = load_config(_env())
-    assert c.smb_host == "192.168.1.40"
+    assert c.smb_host == "192.168.1.100"
     assert c.smb_user == "bob"
     assert c.smb_pass == "s3cret"
     assert c.pictures_share == "Pictures"
@@ -668,14 +668,14 @@ from iphoto_import.mounts import build_smb_url
 
 def test_build_smb_url_basic():
     assert (
-        build_smb_url("192.168.1.40", "bob", "pw", "Pictures")
-        == "smb://bob:pw@192.168.1.40/Pictures"
+        build_smb_url("192.168.1.100", "bob", "pw", "Pictures")
+        == "smb://bob:pw@192.168.1.100/Pictures"
     )
 
 
 def test_build_smb_url_encodes_special_chars():
-    url = build_smb_url("192.168.1.40", "bob", "p@s/w:d", "Pictures")
-    assert url == "smb://bob:p%40s%2Fw%3Ad@192.168.1.40/Pictures"
+    url = build_smb_url("192.168.1.100", "bob", "p@s/w:d", "Pictures")
+    assert url == "smb://bob:p%40s%2Fw%3Ad@192.168.1.100/Pictures"
 
 
 def test_build_smb_url_encodes_username():

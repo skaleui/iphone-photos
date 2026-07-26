@@ -13,10 +13,10 @@ into date-based folders on an SSD, run manually from a Mac mini. The import is
 ## 2. Topology
 
 - **iPhone** → USB → **Mac mini**. The script runs on macOS.
-- **Destination**: two separate SMB shares hosted by a Linux box at `192.168.1.40`,
+- **Destination**: two separate SMB shares hosted by a Linux box at `192.168.1.100`,
   backed by an SSD, mounted on the Mac mini:
-  - `smb://192.168.1.40/Pictures` → `/Volumes/Pictures`
-  - `smb://192.168.1.40/Videos`   → `/Volumes/Videos`
+  - `smb://192.168.1.100/Pictures` → `/Volumes/Pictures`
+  - `smb://192.168.1.100/Videos`   → `/Volumes/Videos`
 
 ## 3. Confirmed decisions
 
@@ -46,7 +46,7 @@ Connection settings and credentials are loaded from a `.env` file at startup
 (via `python-dotenv`, or a minimal parser). Keys:
 
 ```
-SMB_HOST=192.168.1.40
+SMB_HOST=192.168.1.100
 SMB_USER=youruser
 SMB_PASS=yourpassword
 PICTURES_SHARE=Pictures
@@ -87,7 +87,7 @@ selection, dedup) is pure and consumes `PhotoSource` items — fully unit-testab
 
 1. **Ensure mounts.** Load `.env`. For each share: if its mount point is absent,
    mount using the `.env` credentials, e.g.
-   `osascript -e 'mount volume "smb://USER:PASS@192.168.1.40/<share>"'`
+   `osascript -e 'mount volume "smb://USER:PASS@192.168.1.100/<share>"'`
    (password URL-encoded). Resolve the actual mount point (macOS may append `-1`
    if already mounted). Verify writability. On failure → clear error, exit before
    any download.
