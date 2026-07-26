@@ -1,4 +1,5 @@
 import argparse
+import shutil
 import sys
 from pathlib import Path
 from typing import Optional
@@ -38,6 +39,13 @@ def main(argv: Optional[list] = None) -> int:
         return 1
     if args.staging:
         config.staging_dir = args.staging
+
+    if shutil.which("exiftool") is None:
+        print(
+            "exiftool not found. Install with: brew install exiftool",
+            file=sys.stderr,
+        )
+        return 1
 
     try:
         ensure_all_mounts(config)

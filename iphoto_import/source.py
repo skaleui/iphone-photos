@@ -100,11 +100,25 @@ class ImageCaptureSource(PhotoSource):
     be open. This is a one-shot CLI, so the session's lifetime is the process
     and the OS reclaims it on exit. (Stopping the browser only ends device
     discovery; it does not close an already-open device session.)
+
+    Object lifetime: the browser, both delegates, and the found device are
+    intentionally retained as instance attributes (self._browser,
+    self._browser_delegate, self._camera_delegate, self._device) rather than
+    left as list_items() locals. ImageCaptureCore holds the device delegate
+    WEAKLY, so if these were collected when list_items() returns, a delegate
+    callback firing during a deferred download() would hit a dangling
+    reference (unrecognized-selector crash), and deallocating the browser
+    could tear down the device the closures depend on. Keeping strong refs on
+    the instance (which the CLI holds for the whole run) prevents that.
     """
 
     def __init__(self, discovery_timeout: float = 30.0, ready_timeout: float = 30.0):
         self.discovery_timeout = discovery_timeout
         self.ready_timeout = ready_timeout
+        self._browser = None
+        self._browser_delegate = None
+        self._camera_delegate = None
+        self._device = None
 
     def list_items(self) -> List[MediaItem]:
         import ImageCaptureCore as ICC
@@ -167,10 +181,17 @@ class ImageCaptureSource(PhotoSource):
             def cameraDeviceDidEnableAccessRestriction_(self, device):
                 pass
 
+        # Retain on the instance (not just as locals): ImageCaptureCore holds the
+        # device delegate weakly, and the download() closures returned below run
+        # after this method returns. If these were collected, a delegate callback
+        # during a deferred download would hit a dangling reference. See class docstring.
         camera_delegate = CameraDelegate.alloc().init()
         browser_delegate = BrowserDelegate.alloc().init()
+        self._camera_delegate = camera_delegate
+        self._browser_delegate = browser_delegate
 
         browser = ICC.ICDeviceBrowser.alloc().init()
+        self._browser = browser
         browser.setDelegate_(browser_delegate)
         browser.setBrowsedDeviceTypeMask_(
             ICC.ICDeviceTypeMaskCamera | ICC.ICDeviceLocationTypeMaskLocal
@@ -187,6 +208,7 @@ class ImageCaptureSource(PhotoSource):
                     "If this is the first run, grant the macOS permission prompt."
                 )
 
+            self._device = device
             device.setDelegate_(camera_delegate)
 
             def open_completion(error):
