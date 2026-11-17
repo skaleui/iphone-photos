@@ -39,3 +39,22 @@ def test_main_exits_before_download_when_exiftool_missing(tmp_path, monkeypatch,
     assert rc == 1
     err = capsys.readouterr().err.lower()
     assert "exiftool not found" in err
+
+
+def test_main_selects_photos_library_source(tmp_path, monkeypatch, capsys):
+    pics = tmp_path / "Pictures"; vids = tmp_path / "Videos"
+    pics.mkdir(); vids.mkdir()
+    cfg = Config("h", "u", "p", "Pictures", "Videos", tmp_path / "staging")
+    monkeypatch.setattr(type(cfg), "pictures_mount", property(lambda self: pics))
+    monkeypatch.setattr(type(cfg), "videos_mount", property(lambda self: vids))
+    monkeypatch.setattr(cli, "load_config_from_dotenv", lambda: cfg)
+    monkeypatch.setattr(cli, "ensure_all_mounts", lambda _config: None)
+    monkeypatch.setattr(cli.shutil, "which", lambda _name: "/usr/bin/exiftool")
+    monkeypatch.setattr(cli, "PhotosLibrarySource", lambda _path: FakeSource([
+        ("IMG_1.HEIC", datetime(2026, 7, 25, 8, 0), b"x")
+    ]))
+
+    rc = cli.main(["--source", "photos", "--dry-run"])
+
+    assert rc == 0
+    assert "photos: 1" in capsys.readouterr().out.lower()

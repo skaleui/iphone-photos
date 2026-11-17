@@ -299,6 +299,8 @@ def _make_download(camera_file):
         dest_dir = Path(dest_dir)
         dest_dir.mkdir(parents=True, exist_ok=True)
         result = {"path": None, "error": None, "done": False}
+        expected_path = dest_dir / camera_file.name()
+        expected_size = int(camera_file.fileSize())
 
         # ImageCaptureCore calls this block as (savedFilename: NSString, error: NSError).
         # Wrap the whole body: an exception raised out of a PyObjC block is an
@@ -321,9 +323,15 @@ def _make_download(camera_file):
             ICC.ICOverwrite: True,
         }
         camera_file.requestDownloadWithOptions_completion_(options, completion)
-        _pump_runloop_until(timeout, lambda: result["done"])
+        _pump_runloop_until(
+            timeout,
+            lambda: result["done"]
+            or (expected_path.is_file() and expected_path.stat().st_size == expected_size),
+        )
 
         if not result["done"]:
+            if expected_path.is_file() and expected_path.stat().st_size == expected_size:
+                return expected_path
             raise ImageCaptureError(f"download timed out for {camera_file.name()}")
         if result["error"]:
             raise ImageCaptureError(f"download failed for {camera_file.name()}: {result['error']}")

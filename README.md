@@ -9,6 +9,8 @@ and incremental.
 2. `brew install exiftool`
 3. `cp .env.example .env` and fill in SMB host, user, password, share names.
 4. First run triggers a macOS prompt to access the iPhone — grant it.
+5. To import the Mac Photos library, grant Terminal (or the app running Python)
+    Full Disk Access in **System Settings → Privacy & Security** if macOS requests it.
 
 ## Use
 Plug in the unlocked iPhone (tap **Trust**), then:
@@ -16,6 +18,20 @@ Plug in the unlocked iPhone (tap **Trust**), then:
     python3 import_photos.py --dry-run     # preview
     python3 import_photos.py               # import
     python3 import_photos.py --verbose     # import, logging each file
+
+To import original files from the last-opened Mac Photos library, preview first:
+
+    python3 import_photos.py --source photos --dry-run
+    python3 import_photos.py --source photos
+    python3 import_photos.py --source photos --delete-source
+
+For a specific library, add `--library "/path/to/Photos Library.photoslibrary"`.
+The Photos source exports originals and is read-only unless `--delete-source` is
+provided. With that flag, an asset is moved to Photos' Recently Deleted only
+after every file in its import group succeeds. Items whose originals are stored
+only in iCloud may fail until they are downloaded to the Mac. Live Photo stills
+and motion clips are both included; unsupported file extensions are reported as
+skipped.
 
 Photos land in `/Volumes/<PICTURES_SHARE>/YYYY/YYYY-MM-DD/`, videos in
 `/Volumes/<VIDEOS_SHARE>/YYYY/YYYY-MM-DD/`. Files already imported (same filename in

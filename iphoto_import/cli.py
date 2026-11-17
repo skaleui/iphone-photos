@@ -7,6 +7,7 @@ from typing import Optional
 from .config import load_config_from_dotenv
 from .mounts import build_smb_url, ensure_mounted, MountError
 from .organizer import run_import
+from .photos_library import PhotosLibrarySource
 from .source import ImageCaptureSource
 
 
@@ -30,7 +31,23 @@ def main(argv: Optional[list] = None) -> int:
     parser.add_argument("--dry-run", action="store_true", help="show the plan without downloading or writing")
     parser.add_argument("--verbose", action="store_true", help="log each file")
     parser.add_argument("--staging", type=Path, default=None, help="override staging directory")
+    parser.add_argument(
+        "--source", choices=("iphone", "photos"), default="iphone",
+        help="media source (default: connected iPhone)",
+    )
+    parser.add_argument(
+        "--library", type=Path, default=None,
+        help="Photos library path; defaults to the last-opened library",
+    )
+    parser.add_argument(
+        "--delete-source", action="store_true",
+        help="move successfully imported Photos assets to Recently Deleted",
+    )
     args = parser.parse_args(argv)
+    if args.library and args.source != "photos":
+        parser.error("--library can only be used with --source photos")
+    if args.delete_source and args.source != "photos":
+        parser.error("--delete-source can only be used with --source photos")
 
     try:
         config = load_config_from_dotenv()
@@ -54,8 +71,19 @@ def main(argv: Optional[list] = None) -> int:
         return 1
 
     try:
-        source = build_source()
-        report = run_import(source, config, dry_run=args.dry_run, verbose=args.verbose)
+        source = (
+            PhotosLibrarySource(args.library)
+            if args.source == "photos"
+            else build_source()
+        )
+        report = run_import(
+            source,
+            config,
+            dry_run=args.dry_run,
+            verbose=args.verbose,
+            skip_livephoto=args.source != "photos",
+            cleanup_source=args.delete_source,
+        )
     except Exception as exc:
         print(f"Import failed: {exc}", file=sys.stderr)
         return 1
@@ -64,6 +92,8 @@ def main(argv: Optional[list] = None) -> int:
     print(
         f"{label}: photos: {report.photos}, videos: {report.videos}, "
         f"skipped-existing: {report.skipped_existing}, "
-        f"skipped-livephoto: {report.skipped_livephoto}, errors: {report.errors}"
+        f"skipped-livephoto: {report.skipped_livephoto}, "
+        f"skipped-other: {report.skipped_other}, "
+        f"deleted-source: {report.deleted_source}, errors: {report.errors}"
     )
     return 0

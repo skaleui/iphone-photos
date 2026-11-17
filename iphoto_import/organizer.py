@@ -16,6 +16,8 @@ class ImportReport:
     videos: int = 0
     skipped_existing: int = 0
     skipped_livephoto: int = 0
+    skipped_other: int = 0
+    deleted_source: int = 0
     errors: int = 0
 
 
@@ -31,13 +33,23 @@ def dest_exists_checker(config: Config) -> Callable[[str, str, str], bool]:
 
 
 def run_import(source: PhotoSource, config: Config,
-               dry_run: bool = False, verbose: bool = False) -> ImportReport:
+               dry_run: bool = False, verbose: bool = False,
+               skip_livephoto: bool = True,
+               cleanup_source: bool = False) -> ImportReport:
     items = source.list_items()
-    plan = build_plan(items, dest_exists_checker(config))
+    plan = build_plan(items, dest_exists_checker(config), skip_livephoto=skip_livephoto)
     report = ImportReport(
         skipped_existing=plan.skipped_existing,
         skipped_livephoto=plan.skipped_livephoto,
+        skipped_other=plan.skipped_other,
     )
+    cleanup_groups = {}
+    if cleanup_source:
+        for entry in [*plan.to_import, *plan.existing]:
+            group = entry.item.cleanup_group
+            if group is not None:
+                cleanup_groups.setdefault(group, []).append(entry)
+    completed_groups = {group: True for group in cleanup_groups}
 
     for entry in plan.to_import:
         if dry_run:
@@ -56,13 +68,28 @@ def run_import(source: PhotoSource, config: Config,
                 staged.unlink(missing_ok=True)
                 continue
             dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(staged), str(dest))
+            with staged.open("rb") as source_file, dest.open("wb") as dest_file:
+                shutil.copyfileobj(source_file, dest_file, length=1024 * 1024)
+            staged.unlink(missing_ok=True)
             _count(report, entry.media_type)
             if verbose:
                 print(f"imported {entry.item.name} -> {dest}")
         except Exception as exc:  # per-file failure never aborts the run
             report.errors += 1
+            if entry.item.cleanup_group is not None:
+                completed_groups[entry.item.cleanup_group] = False
             print(f"ERROR importing {entry.item.name}: {exc}")
+
+    if not dry_run:
+        for group, entries in cleanup_groups.items():
+            if not completed_groups[group]:
+                continue
+            try:
+                entries[0].item.cleanup()
+                report.deleted_source += 1
+            except Exception as exc:
+                report.errors += 1
+                print(f"ERROR deleting source for {entries[0].item.name}: {exc}")
     return report
 
 

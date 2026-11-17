@@ -1,3 +1,5 @@
 pyobjc-framework-ImageCaptureCore>=10.0
+pyobjc-framework-Quartz>=10.0
+osxphotos>=0.77.2
 python-dotenv>=1.0
 pytest>=8.0

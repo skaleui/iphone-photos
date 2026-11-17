@@ -2,8 +2,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-PHOTO_EXTS = frozenset({".heic", ".heif", ".jpg", ".jpeg", ".png"})
-VIDEO_EXTS = frozenset({".mov", ".mp4", ".m4v"})
+PHOTO_EXTS = frozenset({
+    ".heic", ".heif", ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".gif",
+    ".bmp", ".dng", ".cr2", ".cr3", ".nef", ".nrw", ".arw", ".raf",
+    ".orf", ".rw2", ".pef", ".srw", ".raw", ".3fr", ".fff", ".iiq",
+    ".k25", ".kdc", ".mef", ".mos", ".mrw", ".rwl", ".x3f",
+})
+VIDEO_EXTS = frozenset({
+    ".mov", ".mp4", ".m4v", ".avi", ".mkv", ".mpg", ".mpeg", ".mts",
+    ".m2ts", ".3gp", ".3g2", ".flv", ".vob", ".ts", ".webm", ".wmv",
+})
 
 
 def classify(name: str) -> Optional[str]:

@@ -51,6 +51,7 @@ def test_already_imported_is_skipped_by_name_and_folder():
     plan = build_plan(items, exists)
     assert {e.item.name for e in plan.to_import} == {"IMG_2.HEIC"}
     assert plan.skipped_existing == 1
+    assert [e.item.name for e in plan.existing] == ["IMG_1.HEIC"]
 
 
 def test_unknown_date_goes_to_unknown_folder():
